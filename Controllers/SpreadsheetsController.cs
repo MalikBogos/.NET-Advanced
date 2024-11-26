@@ -59,11 +59,17 @@ namespace DoWellAdvanced.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Title")] Spreadsheet spreadsheet, int[] selectedTags)
         {
+            // Verwijder ModelState checks voor andere properties
+            ModelState.Remove("UserId");
+            ModelState.Remove("User");
+            ModelState.Remove("SpreadsheetTags");
+
             if (ModelState.IsValid)
             {
                 spreadsheet.UserId = _userManager.GetUserId(User);
                 spreadsheet.CreatedAt = DateTime.Now;
                 spreadsheet.IsVisible = true;
+                spreadsheet.SpreadsheetTags = new List<SpreadsheetTag>();
 
                 _context.Add(spreadsheet);
                 await _context.SaveChangesAsync();
@@ -83,6 +89,7 @@ namespace DoWellAdvanced.Controllers
 
                 return RedirectToAction(nameof(Index));
             }
+
             ViewBag.Tags = new MultiSelectList(_context.Tags.Where(t => t.IsVisible), "Id", "Name");
             return View(spreadsheet);
         }

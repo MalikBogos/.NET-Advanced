@@ -13,17 +13,14 @@ namespace DoWellAdvanced.Models
         public string Title { get; set; }
 
         [Display(Name = "Aangemaakt op")]
-        [DataType(DataType.DateTime)]
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; }
 
         [Display(Name = "Zichtbaar")]
-        public bool IsVisible { get; set; } = true;
+        public bool IsVisible { get; set; }
 
-        [Required]
         public string UserId { get; set; }
         public IdentityUser User { get; set; }
 
-        // Navigatie properties
         public virtual ICollection<SpreadsheetTag> SpreadsheetTags { get; set; }
     }
 }
