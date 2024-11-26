@@ -103,7 +103,9 @@ namespace DoWellAdvanced.Controllers
             }
 
             var spreadsheet = await _context.Spreadsheets
+                .Include(s => s.User)           // Zorg dat User geladen wordt
                 .Include(s => s.SpreadsheetTags)
+                    .ThenInclude(st => st.Tag)  // Laad ook de tags
                 .FirstOrDefaultAsync(s => s.Id == id);
 
             if (spreadsheet == null)
@@ -111,8 +113,12 @@ namespace DoWellAdvanced.Controllers
                 return NotFound();
             }
 
-            ViewBag.Tags = new MultiSelectList(_context.Tags.Where(t => t.IsVisible), "Id", "Name",
-                spreadsheet.SpreadsheetTags.Select(st => st.TagId));
+            ViewBag.Tags = new MultiSelectList(
+                _context.Tags.Where(t => t.IsVisible),
+                "Id",
+                "Name",
+                spreadsheet.SpreadsheetTags.Select(st => st.TagId)
+            );
             return View(spreadsheet);
         }
 
@@ -126,14 +132,25 @@ namespace DoWellAdvanced.Controllers
                 return NotFound();
             }
 
+            ModelState.Remove("UserId");
+            ModelState.Remove("User");
+            ModelState.Remove("SpreadsheetTags");
+
             if (ModelState.IsValid)
             {
                 try
                 {
+                    // Haal de bestaande spreadsheet op met alle gerelateerde data
                     var existingSpreadsheet = await _context.Spreadsheets
                         .Include(s => s.SpreadsheetTags)
                         .FirstOrDefaultAsync(s => s.Id == id);
 
+                    if (existingSpreadsheet == null)
+                    {
+                        return NotFound();
+                    }
+
+                    // Update alleen de titel, behoud andere waarden
                     existingSpreadsheet.Title = spreadsheet.Title;
 
                     // Update tags
@@ -144,13 +161,14 @@ namespace DoWellAdvanced.Controllers
                         {
                             _context.SpreadsheetTags.Add(new SpreadsheetTag
                             {
-                                SpreadsheetId = spreadsheet.Id,
+                                SpreadsheetId = existingSpreadsheet.Id,
                                 TagId = tagId
                             });
                         }
                     }
 
                     await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -163,8 +181,8 @@ namespace DoWellAdvanced.Controllers
                         throw;
                     }
                 }
-                return RedirectToAction(nameof(Index));
             }
+
             ViewBag.Tags = new MultiSelectList(_context.Tags.Where(t => t.IsVisible), "Id", "Name");
             return View(spreadsheet);
         }
