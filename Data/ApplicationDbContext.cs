@@ -27,7 +27,9 @@ namespace DoWellAdvanced.Data
             modelBuilder.Entity<Tag>().HasData(
                 new Tag { Id = 1, Name = "Werk", IsVisible = true },
                 new Tag { Id = 2, Name = "Persoonlijk", IsVisible = true },
-                new Tag { Id = 3, Name = "Project", IsVisible = true }
+                new Tag { Id = 3, Name = "Project", IsVisible = true },
+                new Tag { Id = 4, Name = "Planning", IsVisible = true },
+                new Tag { Id = 5, Name = "Budget", IsVisible = true }
             );
         }
     }

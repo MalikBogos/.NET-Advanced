@@ -26,71 +26,64 @@ namespace DoWellAdvanced.Controllers
         public async Task<IActionResult> Index(string searchString, int? tagId)
         {
             var spreadsheets = _context.Spreadsheets
+                .Include(s => s.User)
                 .Include(s => s.SpreadsheetTags)
                     .ThenInclude(st => st.Tag)
-                .Include(s => s.User)
-                .Where(s => s.IsVisible); // Toon alleen zichtbare items
+                .Where(s => s.IsVisible);
 
-            // Filter op tag indien opgegeven
             if (tagId.HasValue)
             {
                 spreadsheets = spreadsheets.Where(s =>
                     s.SpreadsheetTags.Any(st => st.TagId == tagId));
             }
 
-            // Filter op zoekterm indien opgegeven
             if (!String.IsNullOrEmpty(searchString))
             {
                 spreadsheets = spreadsheets.Where(s =>
                     s.Title.Contains(searchString));
             }
 
-            // Voorbereid ViewBag voor dropdown
             ViewBag.Tags = new SelectList(_context.Tags.Where(t => t.IsVisible), "Id", "Name");
-
             return View(await spreadsheets.ToListAsync());
-        }
-
-        // GET: Spreadsheets/Details/5
-        public async Task<IActionResult> Details(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var spreadsheet = await _context.Spreadsheets
-                .Include(s => s.User)
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (spreadsheet == null)
-            {
-                return NotFound();
-            }
-
-            return View(spreadsheet);
         }
 
         // GET: Spreadsheets/Create
         public IActionResult Create()
         {
-            ViewData["UserId"] = new SelectList(_context.Users, "Id", "Id");
+            ViewBag.Tags = new MultiSelectList(_context.Tags.Where(t => t.IsVisible), "Id", "Name");
             return View();
         }
 
         // POST: Spreadsheets/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Title,CreatedAt,IsVisible,UserId")] Spreadsheet spreadsheet)
+        public async Task<IActionResult> Create([Bind("Title")] Spreadsheet spreadsheet, int[] selectedTags)
         {
             if (ModelState.IsValid)
             {
+                spreadsheet.UserId = _userManager.GetUserId(User);
+                spreadsheet.CreatedAt = DateTime.Now;
+                spreadsheet.IsVisible = true;
+
                 _context.Add(spreadsheet);
                 await _context.SaveChangesAsync();
+
+                if (selectedTags != null)
+                {
+                    foreach (var tagId in selectedTags)
+                    {
+                        _context.SpreadsheetTags.Add(new SpreadsheetTag
+                        {
+                            SpreadsheetId = spreadsheet.Id,
+                            TagId = tagId
+                        });
+                    }
+                    await _context.SaveChangesAsync();
+                }
+
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["UserId"] = new SelectList(_context.Users, "Id", "Id", spreadsheet.UserId);
+            ViewBag.Tags = new MultiSelectList(_context.Tags.Where(t => t.IsVisible), "Id", "Name");
             return View(spreadsheet);
         }
 
@@ -102,21 +95,24 @@ namespace DoWellAdvanced.Controllers
                 return NotFound();
             }
 
-            var spreadsheet = await _context.Spreadsheets.FindAsync(id);
+            var spreadsheet = await _context.Spreadsheets
+                .Include(s => s.SpreadsheetTags)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
             if (spreadsheet == null)
             {
                 return NotFound();
             }
-            ViewData["UserId"] = new SelectList(_context.Users, "Id", "Id", spreadsheet.UserId);
+
+            ViewBag.Tags = new MultiSelectList(_context.Tags.Where(t => t.IsVisible), "Id", "Name",
+                spreadsheet.SpreadsheetTags.Select(st => st.TagId));
             return View(spreadsheet);
         }
 
         // POST: Spreadsheets/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,CreatedAt,IsVisible,UserId")] Spreadsheet spreadsheet)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Title")] Spreadsheet spreadsheet, int[] selectedTags)
         {
             if (id != spreadsheet.Id)
             {
@@ -127,7 +123,26 @@ namespace DoWellAdvanced.Controllers
             {
                 try
                 {
-                    _context.Update(spreadsheet);
+                    var existingSpreadsheet = await _context.Spreadsheets
+                        .Include(s => s.SpreadsheetTags)
+                        .FirstOrDefaultAsync(s => s.Id == id);
+
+                    existingSpreadsheet.Title = spreadsheet.Title;
+
+                    // Update tags
+                    _context.SpreadsheetTags.RemoveRange(existingSpreadsheet.SpreadsheetTags);
+                    if (selectedTags != null)
+                    {
+                        foreach (var tagId in selectedTags)
+                        {
+                            _context.SpreadsheetTags.Add(new SpreadsheetTag
+                            {
+                                SpreadsheetId = spreadsheet.Id,
+                                TagId = tagId
+                            });
+                        }
+                    }
+
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
@@ -143,7 +158,7 @@ namespace DoWellAdvanced.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["UserId"] = new SelectList(_context.Users, "Id", "Id", spreadsheet.UserId);
+            ViewBag.Tags = new MultiSelectList(_context.Tags.Where(t => t.IsVisible), "Id", "Name");
             return View(spreadsheet);
         }
 
@@ -157,7 +172,10 @@ namespace DoWellAdvanced.Controllers
 
             var spreadsheet = await _context.Spreadsheets
                 .Include(s => s.User)
+                .Include(s => s.SpreadsheetTags)
+                    .ThenInclude(st => st.Tag)
                 .FirstOrDefaultAsync(m => m.Id == id);
+
             if (spreadsheet == null)
             {
                 return NotFound();
@@ -174,11 +192,9 @@ namespace DoWellAdvanced.Controllers
             var spreadsheet = await _context.Spreadsheets.FindAsync(id);
             if (spreadsheet != null)
             {
-                // Soft delete - maak alleen onzichtbaar
-                spreadsheet.IsVisible = false;
+                spreadsheet.IsVisible = false;  // Soft delete
                 await _context.SaveChangesAsync();
             }
-
             return RedirectToAction(nameof(Index));
         }
 

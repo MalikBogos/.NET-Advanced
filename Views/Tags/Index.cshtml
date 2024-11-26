@@ -9,6 +9,28 @@
 <p>
     <a asp-action="Create">Create New</a>
 </p>
+
+<form asp-action="Index" method="get">
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <label>Zoeken op naam:</label>
+            <input type="text" name="searchString" class="form-control" />
+        </div>
+        <div class="col-md-4">
+            <label>Filter op gebruik:</label>
+            <select name="usage" class="form-control">
+                <option value="">Alle</option>
+                <option value="used">In gebruik</option>
+                <option value="unused">Niet in gebruik</option>
+            </select>
+        </div>
+        <div class="col-md-2 align-self-end">
+            <button type="submit" class="btn btn-primary">Filter</button>
+        </div>
+    </div>
+</form>
+
+
 <table class="table">
     <thead>
         <tr>

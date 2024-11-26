@@ -20,9 +20,31 @@ namespace DoWellAdvanced.Controllers
         }
 
         // GET: Tags
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string searchString, string usage)
         {
-            return View(await _context.Tags.ToListAsync());
+            var tags = _context.Tags
+                .Include(t => t.SpreadsheetTags)
+                .Where(t => t.IsVisible);
+
+            if (!String.IsNullOrEmpty(searchString))
+            {
+                tags = tags.Where(t => t.Name.Contains(searchString));
+            }
+
+            if (!String.IsNullOrEmpty(usage))
+            {
+                switch (usage)
+                {
+                    case "used":
+                        tags = tags.Where(t => t.SpreadsheetTags.Any());
+                        break;
+                    case "unused":
+                        tags = tags.Where(t => !t.SpreadsheetTags.Any());
+                        break;
+                }
+            }
+
+            return View(await tags.ToListAsync());
         }
 
         // GET: Tags/Details/5
@@ -142,10 +164,9 @@ namespace DoWellAdvanced.Controllers
             var tag = await _context.Tags.FindAsync(id);
             if (tag != null)
             {
-                _context.Tags.Remove(tag);
+                tag.IsVisible = false;  // Soft delete
+                await _context.SaveChangesAsync();
             }
-
-            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
