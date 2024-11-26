@@ -103,9 +103,9 @@ namespace DoWellAdvanced.Controllers
             }
 
             var spreadsheet = await _context.Spreadsheets
-                .Include(s => s.User)           // Zorg dat User geladen wordt
+                .Include(s => s.User)          
                 .Include(s => s.SpreadsheetTags)
-                    .ThenInclude(st => st.Tag)  // Laad ook de tags
+                    .ThenInclude(st => st.Tag)  
                 .FirstOrDefaultAsync(s => s.Id == id);
 
             if (spreadsheet == null)
@@ -140,7 +140,6 @@ namespace DoWellAdvanced.Controllers
             {
                 try
                 {
-                    // Haal de bestaande spreadsheet op met alle gerelateerde data
                     var existingSpreadsheet = await _context.Spreadsheets
                         .Include(s => s.SpreadsheetTags)
                         .FirstOrDefaultAsync(s => s.Id == id);

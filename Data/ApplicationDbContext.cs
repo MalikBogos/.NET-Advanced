@@ -23,7 +23,6 @@ namespace DoWellAdvanced.Data
             modelBuilder.Entity<SpreadsheetTag>()
                 .HasKey(st => new { st.SpreadsheetId, st.TagId });
 
-            // Seed data voor Tags (deze hebben geen UserId nodig)
             modelBuilder.Entity<Tag>().HasData(
                 new Tag { Id = 1, Name = "Werk", IsVisible = true },
                 new Tag { Id = 2, Name = "Persoonlijk", IsVisible = true },

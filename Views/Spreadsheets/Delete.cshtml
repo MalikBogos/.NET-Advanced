@@ -23,12 +23,11 @@
         <dd class="col-sm-10">
             @Html.DisplayFor(model => model.CreatedAt)
         </dd>
-        @* IsVisible kunnen we weglaten omdat deze spreadsheet nog zichtbaar moet zijn *@
         <dt class="col-sm-2">
-            Eigenaar
+            Creator
         </dt>
         <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.User.Email)  @* Email is informatiever dan Id *@
+            @Html.DisplayFor(model => model.User.Email)
         </dd>
         <dt class="col-sm-2">Tags</dt>
         <dd class="col-sm-10">
